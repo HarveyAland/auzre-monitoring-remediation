@@ -1,0 +1,13 @@
+let TimeoutMinutes = 3;
+let VMName = "win-iis-01";
+let ServiceName = "W3SVC";
+Event
+| where Source == "ServiceMonitor"
+| where Computer == VMName
+| where EventID in (3001, 3002)
+| extend Status = case(EventID == 3001, "Running", EventID == 3002, "Stopped", "Unknown")
+| summarize LastSeen = max(TimeGenerated), LastStatus = any(Status)
+| extend MinutesSinceLast = datetime_diff("minute", now(), LastSeen)
+| extend FinalStatus = iif(MinutesSinceLast > TimeoutMinutes, "Offline", LastStatus)
+| extend VMName = VMName, ServiceName = ServiceName
+| project VMName, ServiceName, FinalStatus, LastSeen

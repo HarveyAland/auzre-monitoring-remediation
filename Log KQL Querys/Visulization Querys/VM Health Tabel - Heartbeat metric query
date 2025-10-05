@@ -1,0 +1,6 @@
+Heartbeat
+| summarize LastSeen = max(TimeGenerated) by Computer
+| extend MinutesSince = datetime_diff("minute", now(), LastSeen)
+| extend VMStatus = iif(isnull(LastSeen) or MinutesSince > 5, "Offline", "Online")
+| extend LastSeen = format_datetime(LastSeen, "yyyy-MM-dd HH:mm")
+| project Computer, VMStatus, MinutesSince, LastSeen

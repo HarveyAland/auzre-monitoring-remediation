@@ -1,0 +1,16 @@
+let TimeoutMinutes = 3;
+let VMName = "lin-nginx-01";
+let ServiceName = "nginx";
+Syslog
+| where TimeGenerated > ago(1d)
+| where Computer == VMName
+| where Facility == "user"
+| where SyslogMessage has ServiceName
+| extend Status = case(SyslogMessage has "is Running", "Running",
+                       SyslogMessage has "is NOT running", "Stopped",
+                       "Unknown")
+| summarize LastSeen = max(TimeGenerated), LastStatus = any(Status)
+| extend MinutesSinceLast = datetime_diff("minute", now(), LastSeen)
+| extend FinalStatus = iif(MinutesSinceLast > TimeoutMinutes, "Offline", LastStatus)
+| extend VMName = VMName, ServiceName = ServiceName
+| project VMName, ServiceName, FinalStatus, LastSeen

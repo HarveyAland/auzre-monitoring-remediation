@@ -1,0 +1,21 @@
+# Windows VM - Restart IIS (W3SVC)
+$rg = "aim-dev-rg"
+$vm = "win-iis-vm"
+
+Connect-AzAccount -Identity | Out-Null
+
+$script = @"
+Try {
+  Restart-Service -Name 'W3SVC' -Force
+  Start-Sleep -Seconds 3
+  (Get-Service -Name 'W3SVC').Status
+} Catch {
+  Write-Error $_.Exception.Message
+  Exit 1
+}
+"@
+
+$result = Invoke-AzVMRunCommand -ResourceGroupName $rg -Name $vm `
+  -CommandId 'RunPowerShellScript' -ScriptString $script
+
+Write-Output $result.Value.Message

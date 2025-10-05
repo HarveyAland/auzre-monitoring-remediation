@@ -1,0 +1,16 @@
+let vm = "lin-nginx-01";               // your Linux VM name
+let window = 4m;                       // match alert evaluation window
+Syslog
+| where TimeGenerated > ago(window)
+| where Computer == vm
+| where Facility == "daemon"
+| where SyslogMessage has "nginx"
+| where SyslogMessage has_any ("Deactivated", "failed", "Failed", "stop", "exited", "crashed")
+| summarize StopTime = max(TimeGenerated) by Computer
+| join kind=inner (
+    Heartbeat
+    | summarize LastBeat = max(TimeGenerated) by Computer
+) on Computer
+| extend StopWindowEnd = StopTime + window
+| where LastBeat > StopTime and LastBeat < now()
+| project Computer, StopTime, LastBeat

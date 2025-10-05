@@ -1,0 +1,22 @@
+# Windows VM - Recycle IIS App Pool
+$rg = "aim-dev-rg"
+$vm = "win-iis-01"
+$appPool = "DefaultAppPool"   # change if needed
+
+Connect-AzAccount -Identity | Out-Null
+
+$script = @"
+Try {
+  & "$env:SystemRoot\System32\inetsrv\appcmd.exe" recycle apppool /apppool.name:"$appPool"
+  Start-Sleep -Seconds 2
+  & "$env:SystemRoot\System32\inetsrv\appcmd.exe" list apppool "$appPool" /text:state
+} Catch {
+  Write-Error $_.Exception.Message
+  Exit 1
+}
+"@
+
+$result = Invoke-AzVMRunCommand -ResourceGroupName $rg -Name $vm `
+  -CommandId 'RunPowerShellScript' -ScriptString $script
+
+Write-Output $result.Value.Message

@@ -1,0 +1,13 @@
+let TimeoutMinutes = 3;
+let VMName = "win-print-01";
+let ServiceName = "Print Spooler";
+Event
+| where Source == "ServiceMonitorPrint"
+| where Computer == VMName
+| where EventID in (4001, 4002)
+| extend Status = case(EventID == 4001, "Running", EventID == 4002, "Stopped", "Unknown")
+| summarize LastSeen = max(TimeGenerated), LastStatus = any(Status)
+| extend MinutesSinceLast = datetime_diff("minute", now(), LastSeen)
+| extend FinalStatus = iif(MinutesSinceLast > TimeoutMinutes, "Offline", LastStatus)
+| extend VMName = VMName, ServiceName = ServiceName
+| project VMName, ServiceName, FinalStatus, LastSeen

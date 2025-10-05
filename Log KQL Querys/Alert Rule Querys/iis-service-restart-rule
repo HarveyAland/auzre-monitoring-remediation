@@ -1,0 +1,18 @@
+let vm = "win-iis-01";
+let window = 4m;
+Event
+| where TimeGenerated > ago(4m)
+| where EventLog == "System"
+| where Source == "Service Control Manager"
+| where Computer == vm
+| where EventID in (7031,7034,7036)
+| where RenderedDescription has_any ("W3SVC","World Wide Web Publishing Service")
+| where EventID in (7031,7034) or (EventID == 7036 and RenderedDescription has "stopped")
+| summarize StopTime = max(TimeGenerated) by Computer
+| join kind=inner (
+    Heartbeat
+    | summarize LastBeat = max(TimeGenerated) by Computer
+) on Computer
+| extend StopWindowEnd = StopTime + window
+| where LastBeat > StopTime and LastBeat < now()
+| project Computer, StopTime, LastBeat

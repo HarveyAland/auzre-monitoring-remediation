@@ -1,0 +1,17 @@
+# Linux VM - Reboot (Start if stopped/deallocated)
+$rg = "aim-dev-rg"
+$vm = "lin-nginx-01"
+
+Connect-AzAccount -Identity | Out-Null
+
+# Grab the DisplayStatus field from the Statuses array
+$vmStatus = Get-AzVM -ResourceGroupName $rg -Name $vm -Status
+$state = ($vmStatus.Statuses | Where-Object { $_.Code -like "PowerState/*" }).DisplayStatus
+
+if ($state -eq "VM deallocated" -or $state -eq "VM stopped") {
+    Start-AzVM -ResourceGroupName $rg -Name $vm -NoWait
+    Write-Output "Start issued to $vm (state was '$state')."
+} else {
+    Restart-AzVM -ResourceGroupName $rg -Name $vm -NoWait
+    Write-Output "Restart issued to $vm (state was '$state')."
+}

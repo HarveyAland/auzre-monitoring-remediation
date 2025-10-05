@@ -1,0 +1,9 @@
+// VMs whose last heartbeat is older than 5 minutes
+let lookback = 30m;        // scan back far enough to find the last beat
+let cutoff   = 5m;         // define "missing" as older than 5 minutes
+Heartbeat
+| where TimeGenerated > ago(lookback)
+| summarize LastBeat = max(TimeGenerated) by ResourceId, Computer
+| where LastBeat < now() - cutoff
+
+// Same rule was used for both, split at the dimension by passing in the computer vaule = to thier respected VMs 

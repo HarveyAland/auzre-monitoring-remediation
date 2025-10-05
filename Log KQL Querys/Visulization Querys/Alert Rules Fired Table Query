@@ -1,0 +1,12 @@
+AlertFired_CL
+| sort by TimeGenerated desc
+| extend 
+    ResourceName = tostring(split(TargetResource_s, "/")[-1]),
+    TimeFired = format_datetime(TimeGenerated, "yyyy-MM-dd HH:mm:ss")  // 24-hour format
+| project
+    AlertName = AlertName_s,
+    ResourceName,
+    MonitorCondition = MonitorCondition_s,
+    Severity = Severity_s,
+    TimeFired
+| take 10

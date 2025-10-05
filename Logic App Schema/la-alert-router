@@ -1,0 +1,298 @@
+{
+    "definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "contentVersion": "1.0.0.0",
+        "triggers": {
+            "When_an_HTTP_request_is_received": {
+                "type": "Request",
+                "kind": "Http"
+            }
+        },
+        "actions": {
+            "Parse": {
+                "type": "ParseJson",
+                "inputs": {
+                    "content": "@triggerBody()",
+                    "schema": {
+                        "schemaId": "azureMonitorCommonAlertSchema",
+                        "data": {
+                            "essentials": {
+                                "alertRule": "iis-vm-restart",
+                                "severity": "Sev2",
+                                "signalType": "Log",
+                                "monitorCondition": "Fired",
+                                "alertTargetIDs": [
+                                    "/subscriptions/x/resourceGroups/rg/providers/Microsoft.Compute/virtualMachines/vm1"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "runAfter": {}
+            },
+            "if_fired": {
+                "type": "If",
+                "expression": {
+                    "and": [
+                        {
+                            "equals": [
+                                "@toLower(coalesce(body('Parse')?['data']?['essentials']?['monitorCondition'], ''))\r\n",
+                                "fired"
+                            ]
+                        }
+                    ]
+                },
+                "actions": {
+                    "route": {
+                        "type": "Switch",
+                        "expression": "@body('Parse')?['data']?['essentials']?['alertRule']",
+                        "default": {
+                            "actions": {
+                                "Compose_1": {
+                                    "type": "Compose",
+                                    "inputs": "@trim(toLower(coalesce(body('Parse')?['data']?['essentials']?['alertRule'], triggerBody()?['data']?['essentials']?['alertRule'])))"
+                                }
+                            }
+                        },
+                        "cases": {
+                            "Case_1": {
+                                "actions": {
+                                    "HTTP": {
+                                        "type": "Http",
+                                        "inputs": {
+                                            "uri": "https://management.azure.com/subscriptions/7b7a40d1-f9a8-4e4c-8f4d-24df07a1ef21/resourceGroups/aim-dev-rg/providers/Microsoft.Automation/automationAccounts/aim-auto/jobs/@{guid()}?api-version=2019-06-01",
+                                            "method": "PUT",
+                                            "headers": {
+                                                "Content-Type": "application/json"
+                                            },
+                                            "body": {
+                                                "properties": {
+                                                    "runbook": {
+                                                        "name": "Restart-IIS"
+                                                    }
+                                                }
+                                            },
+                                            "authentication": {
+                                                "type": "ManagedServiceIdentity",
+                                                "audience": "https://management.azure.com/"
+                                            }
+                                        },
+                                        "runtimeConfiguration": {
+                                            "contentTransfer": {
+                                                "transferMode": "Chunked"
+                                            }
+                                        }
+                                    }
+                                },
+                                "case": "iis-service-restart-rule-22"
+                            },
+                            "Case_2": {
+                                "actions": {
+                                    "HTTP_1": {
+                                        "type": "Http",
+                                        "inputs": {
+                                            "uri": "https://management.azure.com/subscriptions/7b7a40d1-f9a8-4e4c-8f4d-24df07a1ef21/resourceGroups/aim-dev-rg/providers/Microsoft.Automation/automationAccounts/aim-auto/jobs/@{guid()}?api-version=2019-06-01",
+                                            "method": "PUT",
+                                            "headers": {
+                                                "Content-Type": "application/json"
+                                            },
+                                            "body": {
+                                                "properties": {
+                                                    "runbook": {
+                                                        "name": "iis-vm-restart"
+                                                    }
+                                                }
+                                            },
+                                            "authentication": {
+                                                "type": "ManagedServiceIdentity",
+                                                "audience": "https://management.azure.com/"
+                                            }
+                                        },
+                                        "runtimeConfiguration": {
+                                            "contentTransfer": {
+                                                "transferMode": "Chunked"
+                                            }
+                                        }
+                                    }
+                                },
+                                "case": "VM Heartbeat Loss - Auto Restart - iis"
+                            },
+                            "Case_3": {
+                                "actions": {
+                                    "HTTP_2": {
+                                        "type": "Http",
+                                        "inputs": {
+                                            "uri": "https://management.azure.com/subscriptions/7b7a40d1-f9a8-4e4c-8f4d-24df07a1ef21/resourceGroups/aim-dev-rg/providers/Microsoft.Automation/automationAccounts/aim-auto/jobs/@{guid()}?api-version=2019-06-01",
+                                            "method": "PUT",
+                                            "headers": {
+                                                "Content-Type": "application/json"
+                                            },
+                                            "body": {
+                                                "properties": {
+                                                    "runbook": {
+                                                        "name": "print-vm-restart"
+                                                    }
+                                                }
+                                            },
+                                            "authentication": {
+                                                "type": "ManagedServiceIdentity",
+                                                "audience": "https://management.azure.com/"
+                                            }
+                                        },
+                                        "runtimeConfiguration": {
+                                            "contentTransfer": {
+                                                "transferMode": "Chunked"
+                                            }
+                                        }
+                                    }
+                                },
+                                "case": "print-vm-down-ag"
+                            },
+                            "Case_4": {
+                                "actions": {
+                                    "HTTP_3": {
+                                        "type": "Http",
+                                        "inputs": {
+                                            "uri": "https://management.azure.com/subscriptions/7b7a40d1-f9a8-4e4c-8f4d-24df07a1ef21/resourceGroups/aim-dev-rg/providers/Microsoft.Automation/automationAccounts/aim-auto/jobs/@{guid()}?api-version=2019-06-01",
+                                            "method": "PUT",
+                                            "headers": {
+                                                "Content-Type": "application/json"
+                                            },
+                                            "body": {
+                                                "properties": {
+                                                    "runbook": {
+                                                        "name": "print-service-restart"
+                                                    }
+                                                }
+                                            },
+                                            "authentication": {
+                                                "type": "ManagedServiceIdentity",
+                                                "audience": "https://management.azure.com/"
+                                            }
+                                        },
+                                        "runtimeConfiguration": {
+                                            "contentTransfer": {
+                                                "transferMode": "Chunked"
+                                            }
+                                        }
+                                    }
+                                },
+                                "case": "print-spooler-service-down-ag\n"
+                            },
+                            "Case_5": {
+                                "actions": {
+                                    "HTTP_4": {
+                                        "type": "Http",
+                                        "inputs": {
+                                            "uri": "https://management.azure.com/subscriptions/7b7a40d1-f9a8-4e4c-8f4d-24df07a1ef21/resourceGroups/aim-dev-rg/providers/Microsoft.Automation/automationAccounts/aim-auto/jobs/@{guid()}?api-version=2019-06-01",
+                                            "method": "PUT",
+                                            "headers": {
+                                                "Content-Type": "application/json"
+                                            },
+                                            "body": {
+                                                "properties": {
+                                                    "runbook": {
+                                                        "name": "nginx-restart"
+                                                    }
+                                                }
+                                            },
+                                            "authentication": {
+                                                "type": "ManagedServiceIdentity",
+                                                "audience": "https://management.azure.com/"
+                                            }
+                                        },
+                                        "runtimeConfiguration": {
+                                            "contentTransfer": {
+                                                "transferMode": "Chunked"
+                                            }
+                                        }
+                                    }
+                                },
+                                "case": "nginx-service-dowm-alert"
+                            },
+                            "Case_6": {
+                                "actions": {
+                                    "HTTP_5": {
+                                        "type": "Http",
+                                        "inputs": {
+                                            "uri": "https://management.azure.com/subscriptions/7b7a40d1-f9a8-4e4c-8f4d-24df07a1ef21/resourceGroups/aim-dev-rg/providers/Microsoft.Automation/automationAccounts/aim-auto/jobs/@{guid()}?api-version=2019-06-01",
+                                            "method": "PUT",
+                                            "headers": {
+                                                "Content-Type": "application/json"
+                                            },
+                                            "body": {
+                                                "properties": {
+                                                    "runbook": {
+                                                        "name": "Nginx-clean-disk"
+                                                    }
+                                                }
+                                            },
+                                            "authentication": {
+                                                "type": "ManagedServiceIdentity",
+                                                "audience": "https://management.azure.com/"
+                                            }
+                                        },
+                                        "runtimeConfiguration": {
+                                            "contentTransfer": {
+                                                "transferMode": "Chunked"
+                                            }
+                                        }
+                                    }
+                                },
+                                "case": "high-cpu-alert-linux-vm"
+                            }
+                        },
+                        "runAfter": {
+                            "Send_Data": [
+                                "Succeeded"
+                            ]
+                        }
+                    },
+                    "Send_Data": {
+                        "type": "ApiConnection",
+                        "inputs": {
+                            "host": {
+                                "connection": {
+                                    "name": "@parameters('$connections')['azureloganalyticsdatacollector']['connectionId']"
+                                }
+                            },
+                            "method": "post",
+                            "body": "{\n  \"AlertName\": \"@{triggerBody()?['data']?['essentials']?['alertRule']}\",\n  \"Severity\": \"@{triggerBody()?['data']?['essentials']?['severity']}\",\n  \"FiredTime\": \"@{triggerBody()?['data']?['essentials']?['firedDateTime']}\",\n  \"MonitorCondition\": \"@{triggerBody()?['data']?['essentials']?['monitorCondition']}\",\n  \"TargetResource\": \"@{triggerBody()?['data']?['essentials']?['alertTargetIDs']?[0]}\"\n}",
+                            "headers": {
+                                "Log-Type": "AlertFired"
+                            },
+                            "path": "/api/logs"
+                        }
+                    }
+                },
+                "else": {
+                    "actions": {}
+                },
+                "runAfter": {
+                    "Parse": [
+                        "Succeeded"
+                    ]
+                }
+            }
+        },
+        "outputs": {},
+        "parameters": {
+            "$connections": {
+                "type": "Object",
+                "defaultValue": {}
+            }
+        }
+    },
+    "parameters": {
+        "$connections": {
+            "type": "Object",
+            "value": {
+                "azureloganalyticsdatacollector": {
+                    "id": "/subscriptions/7b7a40d1-f9a8-4e4c-8f4d-24df07a1ef21/providers/Microsoft.Web/locations/ukwest/managedApis/azureloganalyticsdatacollector",
+                    "connectionId": "/subscriptions/7b7a40d1-f9a8-4e4c-8f4d-24df07a1ef21/resourceGroups/aim-dev-rg/providers/Microsoft.Web/connections/azureloganalyticsdatacollector",
+                    "connectionName": "azureloganalyticsdatacollector"
+                }
+            }
+        }
+    }
+}
