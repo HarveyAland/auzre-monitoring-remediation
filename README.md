@@ -26,7 +26,7 @@ This Project was designed and configured in 6 main parts and will follow the sam
 
 The reason for the split in infrastructure deployment was mainly down to the fact that Since my background is stronger in Terraform and AWS, I deliberately chose Bicep and the Azure portal here to strengthen Azure-specific skills while still applying IAC best practices, it was a win win and a good way to showcase a new IAC language under my belt. 
 
-### Bicep deployed Infrastructure:
+### Bicep deployed Infrastructure 
 - **Resource Group:** `aim-dev-rg`  
 - **Cloud Networking Principles** Vnet, Subnets, Network Security groups.
 - **Azure VMs:**  with extensions for ease of deployment 
@@ -40,7 +40,9 @@ The reason for the split in infrastructure deployment was mainly down to the fac
 - **Runbooks** (PowerShell + Bash)  
 - **Azure Monitor** for metrics and log-based alerts  
 - **Logic App** for alert-driven notifications/workflows  
-- **IAM** all identity access management was configured via the console, for this deployment there was minimal IAM setup needed. 
+- **IAM** all identity access management was configured via the console, for this deployment there was minimal IAM setup needed.
+
+Please see folder attached with all Bicep files - [Bicep Files](https://github.com/HarveyAland/auzre-monitoring-remediation/tree/main/bicep%20files):
 
 ---
 ## Automation 
@@ -55,7 +57,8 @@ The RunBooks were created in mind of production level issues within VMs and serv
 this model solves a lot of that with the monitoring and automatic remediation of services and VMs with some of my tests even proving a RPO time of <4mins which is above gold standard. 
 
  
-### ⚙️ Runbooks Implemented
+### ⚙️ Runbooks Implemented 
+
 | Runbook | Target | Purpose |
 |---------|--------|---------|
 | Restart/Start VM | Windows/Linux | Restart VM if heartbeat is missing (auto-heal). |
@@ -65,7 +68,11 @@ this model solves a lot of that with the monitoring and automatic remediation of
 | Restart Nginx | Linux (Nginx VM) | Auto-recover Nginx service when stopped. |
 | Clean Disk (Linux) | Linux VM | Deletes temp/cache files if disk space < 10%. |
 
-- As you will find in the table above there are more Runbooks here than are set up to rules, not all run books would realistically be automatically spun, some needing reviewed and some troubleshooting steps taken before hand. this would be the case with the IIS app hanging for example, only way you would know for certain is if you test it yourself first. 
+- As you will find in the table above there are more Runbooks here than are set up to rules, not all run books would realistically be automatically spun, some needing reviewed and some troubleshooting steps taken before hand. this would be the case with the IIS app hanging for example, only way you would know for certain is if you test it yourself first.
+
+
+Please see folder attached with all Runbook Scripts used - [Runbook Scripts](https://github.com/HarveyAland/auzre-monitoring-remediation/tree/main/Runbook%20Scripts)
+
 ---
 
 
@@ -128,18 +135,21 @@ The following key alerts were implemented as part of the monitoring design:
 > Each alert was tied to a Logic App workflow that mapped it to the correct remediation Runbook.
 
 
+
 ### 🔄 Custom Service Health Checks for Grafana Dashboard 
 
 One of the first challenges I encountered was that log-based monitoring is **event-driven**. It only reports when a service changes state. That meant dashboards could misleadingly show a service as healthy, simply because the last event was from hours ago - even if the service had since gone offline.
 
-To address this, I combined **event-driven alerts** with a **scheduled heartbeat stream** for dashboards across a mixed environment of two Windows VMs and one Linux VM. This provided a consistent **2-minute detection window** for failures, bridging the gap between event-based alerts and real-time monitoring.
+To address this, I combined **event-driven alerts** for alerts with a **scheduled heartbeat stream** for dashboards across a mixed environment of two Windows VMs and one Linux VM. This provided a consistent **2-minute detection window** for failures, bridging the gap between event-based alerts and real-time monitoring.
 
 -   On **Windows**, the job ran as a Task Scheduler task at startup and every 2 minutes thereafter.
     
 -   On **Linux**, the job was implemented with a cron job (or systemd timer) at the same interval.
+
+-   All jobs were configured to run thier own scripts 
     
 
-Each run:
+The script ran by the task did the following:
 
 -   Checked the status of critical services (IIS, Print Spooler, and Nginx).
     
@@ -166,12 +176,14 @@ I also:
 
 -   Added a **`Computer` field filter** so queries were tied to the correct VM, preventing cross-VM false positives.
     
-Introduced a **10-minute suppression period** to prevent a single VM’s alert from repeatedly firing on the same event.
+-   Introduced a **5-minute suppression period** to prevent a single VM’s alert from repeatedly firing on the same event.
+
+-   Set **Alert Rule** Evaluation time to every 5 minutes.  
     
 
 These changes eliminated redundant alerts and made the monitoring rules much more reliable.
 
-👉 Please see all queries for the alert rules in the queries folder.
+👉 Please see all queries for the alert rules in the queries folder [Alert Rule Queries](https://github.com/HarveyAland/auzre-monitoring-remediation/tree/main/Log%20KQL%20Querys/Alert%20Rule%20Querys)
 
 ---
 ## 🔔 Logic App Integration
@@ -191,16 +203,21 @@ With options to build out the automation with links to create Servicenow Tickets
 ### How it works for me 
 This Logic App is triggered when an HTTP request (Azure Monitor alert) is received. The payload is parsed, and the workflow checks if the alert’s **monitorCondition** is set to _Fired_. If not, it ends. If it has fired, the alert details (name, severity, time, and target resource) are logged to Log Analytics. The app then uses a **Switch** action on the alert rule name to decide which Automation Runbook to start. Each case corresponds to a specific alert (e.g., IIS restart, VM restart, print service restart, Nginx restart/cleanup). If no case matches, it simply records the normalized alert rule name without running a job. Authentication to Automation uses the Logic App’s Managed Identity.
 
-### Logic App Diagram 
-[test-la-route-firing](screenshots\test-la-route-firing.png)
+### Logic App Diagram
+
+Here we have a clear depiction of the logic app workflow during a succesful run. 
+
+![test-la-route-firing](screenshots/test-la-route-firing.png)
 ---
 
 ## 📊 Visualization with Grafana
 Grafana was a no brainer when choosing what tool I would be using for the visualization section on this project. Creating dashboard was very straightforward and was the part I had the most fun with, I feel like with a bigger deployment in a real production environment you could to really utilize the power of Grafana!
 
-The Dashboard is split into 4 rows and you can find the LAW queries for them in the folder attached: 
+The Dashboard is split into 4 rows and you can find the LAW queries for them in the folder attached - [Grafana Dashboard Queries](https://github.com/HarveyAland/auzre-monitoring-remediation/tree/main/Log%20KQL%20Querys/Visulization%20Querys) 
 
 Following this structure really ties the system together: SMEs and NOC engineers can **see system state, recent failures, and whether automation handled them**.
+
+![Grafana Visulisation NOC inspired view](screenshots/grafana-dash-complete.png)
 
 
 **CPU** - Monitoring the CPU of each VM in their own individual panel with threshold markers added at 40%, 70% and 85% to help aid in the visualization.  
