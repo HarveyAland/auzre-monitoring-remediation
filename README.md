@@ -192,7 +192,7 @@ With options to build out the automation with links to create Servicenow Tickets
 This Logic App is triggered when an HTTP request (Azure Monitor alert) is received. The payload is parsed, and the workflow checks if the alert’s **monitorCondition** is set to _Fired_. If not, it ends. If it has fired, the alert details (name, severity, time, and target resource) are logged to Log Analytics. The app then uses a **Switch** action on the alert rule name to decide which Automation Runbook to start. Each case corresponds to a specific alert (e.g., IIS restart, VM restart, print service restart, Nginx restart/cleanup). If no case matches, it simply records the normalized alert rule name without running a job. Authentication to Automation uses the Logic App’s Managed Identity.
 
 ### Logic App Diagram 
-
+[Test-la-route-firing](screenshots\Test-la-route-firing.png)
 ---
 
 ## 📊 Visualization with Grafana
