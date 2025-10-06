@@ -220,7 +220,7 @@ Following this structure really ties the system together: SMEs and NOC engineers
 ![Grafana Visulisation NOC inspired view](screenshots/grafana-dash-complete.png)
 
 
-**CPU** - Monitoring the CPU of each VM in their own individual panel with threshold markers added at 40%, 70% and 85% to help aid in the visualization. No kql query was needed for this table as i used azure vm insights to gather the cpu data. Please see screenshot for configuration - [CPU Panel in Grafana](
+**CPU** - Monitoring the CPU of each VM in their own individual panel with threshold markers added at 40%, 70% and 85% to help aid in the visualization. No kql query was needed for this table as I used Azure Monitor Metrics for Virtual Machines to provide the cpu data. Please see screenshot for [configuration](screenshots/cpu-panel-config.png)
 
 **VM Health** - Using a heartbeat based query to monitor and output the health status of the VMs and pulling two important metrics (Minuets Since & Last Seen) which tell you when the last HB was and how long its been since its last been online.
 
@@ -231,7 +231,7 @@ Following this structure really ties the system together: SMEs and NOC engineers
 ---
 
 ## 🧪 Testing & Verification
-This section documents how alerts and runbooks were validated. I wanted this document not to be just a bunch of screenshots back to back and instead save one dedicated section to a full workflow test and proof of concept showcasing not only the process but the time in which the remediation takes place. 
+This section documents how alerts and runbooks were validated. I wanted this document not to be just a bunch of screenshots back to back and instead save one dedicated section to a full workflow test and proof of concept showcasing not only the process but the time in which the remediation takes place. Allbeit all configured remediation scenarios were tested I chose the IIS service down to showcase for this project as naturally in an enterprise enviroment out of the services i have running iis would be the most important from a high availablity stabdpoint.  
 
 **Format:**  
 1. **Step taken** (e.g., stopped IIS service).  
@@ -239,8 +239,65 @@ This section documents how alerts and runbooks were validated. I wanted this doc
 3. **Evidence screenshot** (LAW query / Azure Job output / Grafana update).  
 4. **Result summary** (alert + remediation worked).  
 
-_Screenshots will be embedded here._  
 
----
+## Grafana Dashboard Before Test
+
+![Before Test](screenshots/beforetest.png)
+
+## 1. Step taken 
+
+Forced iis to stop using the following command which i ran from the console: 
+
+
+**Stop-Service -Name 'W3SVC' -Force** 
+
+
+![Stopping IIS Service](screenshots/test-stop-cmd.png)
+
+
+## 2. Expected outcome
+
+LAW is sent recent service status logs that have been collected from the DCR that the custom job and script checked and pushed.
+
+![Logs collecting event after test](screenshots/test-custom-task-catching-error-sending-to-law-results.png)
+
+Grafana Dashboad will vizulise the event from the data the event query returns - [IIS Service Grafana Query](https://github.com/HarveyAland/auzre-monitoring-remediation/blob/main/Log%20KQL%20Querys/Visulization%20Querys/IIS%20Service%20Health%20Query)
+
+![During Test](screenshots/test-grafana-dash-after.png)
+
+Alert Rule that is set up to monitor IIS service events will be triggered - [IIS Service Alert Rule Query](https://github.com/HarveyAland/auzre-monitoring-remediation/blob/main/Log%20KQL%20Querys/Alert%20Rule%20Querys/iis-service-restart-rule)
+![IIS Alert Rule Fired](screenshots/test-alert-rule-fired.png)
+
+Once Alert rule is fired the Alert group linked send the alert data straight to the **Logic App** as configred and the automation workflow of routing/notifying begins.
+
+![LA Running](screenshots/test-la-route-firing.png)
+
+## 3. Checks & Validation
+
+With the **Logic App** begin invoked and running sucsessfully we can start to verify its automation workflow has ran as expected. 
+
+Alert Rule information passed into the custom log we created to gather and show case recent fired alerts on the dashboard (will be verified in final Grafana dash screenshot)✅
+
+Correct Rule fired and RunBook Linked to Rule was invoked ✅
+
+![Runbook spun-up](screenshots/test-runbook-ran-from-la-automation.png)  
+
+Email sent to admin containing alert data passed from Parameters ✅
+
+![Email to admin](screenshots/test-email-alert-fired-notification.png)
+
+
+## 4. Final Dashboard view after remediation 
+
+As you can the full workflow has been succsesful with the event being monitroed, alerted, admin notified, event visualized and fully remediated 
+
+![Grafana After](screenshots/test-grafana-dash-after.png)
+
+
+This now completes the test portion of the project, showcasing a full remediation. On this check we had a full service recovery of under 4 minuets. 
+
+### Project Summery 
+
+
 
 
