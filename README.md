@@ -220,7 +220,7 @@ Following this structure really ties the system together: SMEs and NOC engineers
 ![Grafana Visulisation NOC inspired view](screenshots/grafana-dash-complete.png)
 
 
-**CPU** - Monitoring the CPU of each VM in their own individual panel with threshold markers added at 40%, 70% and 85% to help aid in the visualization.  
+**CPU** - Monitoring the CPU of each VM in their own individual panel with threshold markers added at 40%, 70% and 85% to help aid in the visualization. No kql query was needed for this table as i used azure vm insights to gather the cpu data. Please see screenshot for configuration - [CPU Panel in Grafana](
 
 **VM Health** - Using a heartbeat based query to monitor and output the health status of the VMs and pulling two important metrics (Minuets Since & Last Seen) which tell you when the last HB was and how long its been since its last been online.
 
