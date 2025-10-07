@@ -26,11 +26,11 @@ This Project was designed and configured in 6 main parts and will follow the sam
 
 ## 🏗️ Infrastructure 
 
-The reason for the split in infrastructure deployment was mainly down to the fact that Since my background is stronger in Terraform and AWS, I deliberately chose Bicep and the Azure portal here to strengthen Azure-specific skills while still applying IAC best practices, it was a win win and a good way to showcase a new IAC language under my belt. 
+The reason for the split in infrastructure deployment was mainly down to the fact that since my background is stronger in Terraform and AWS, I deliberately chose Bicep and the Azure portal here to strengthen Azure-specific skills while still applying IAC best practices, it was a win-win and a good way to showcase a new IAC language under my belt. 
 
 ### Bicep deployed Infrastructure 
 - **Resource Group:** `aim-dev-rg`  
-- **Cloud Networking Principles** Vnet, Subnets, Network Security groups.
+- **Cloud Networking Principles:** Vnet, Subnets, Network Security Groups.
 - **Azure VMs:**  with extensions for ease of deployment 
   - Windows Server (IIS)  
   - Windows Server (Print Spooler)  
@@ -56,9 +56,9 @@ After the main VMs were created, I began building and testing the automation scr
 
 This was one of the most enjoyable parts of the project — and one I could have easily expanded further. While the main focus was monitoring and alerting, automation played an equally important role by turning insights into real, measurable recovery actions. 
 
-The RunBooks were created in mind of production level issues within VMs and servers that most reading will have been at the mercy of at least once in our professional careers, the waiting time can be agonizing especially in my case when i have an end user waiting on me to provide access to a system that is currently down. 
+The Runbooks were created in mind of production level issues within VMs and servers that most reading will have been at the mercy of at least once in our professional careers, the waiting time can be agonizing especially in my case when I have an end user waiting on me to provide access to a system that is currently down. 
 
-this model solves a lot of that with the monitoring and automatic remediation of services and VMs with some of my tests even proving a RPO time of <4mins which is above gold standard. 
+This model solves a lot of that with the monitoring and automatic remediation of services and VMs with some of my tests even proving a RPO time of <4mins which is above gold standard. 
 
  
 ### ⚙️ Runbooks Implemented 
@@ -72,7 +72,7 @@ this model solves a lot of that with the monitoring and automatic remediation of
 | Restart Nginx | Linux (Nginx VM) | Auto-recover Nginx service when stopped. |
 | Clean Disk (Linux) | Linux VM | Deletes temp/cache files if disk space < 10%. |
 
-- As you will find in the table above there are more Runbooks here than are set up to rules, not all run books would realistically be automatically spun, some needing reviewed and some troubleshooting steps taken before hand. this would be the case with the IIS app hanging for example, only way you would know for certain is if you test it yourself first.
+- As you will find in the table above there are more Runbooks here than are set up to rules, not all run books would realistically be automatically spun, some needing reviewed and some troubleshooting steps taken beforehand. This would be the case with the IIS app hanging for example, only way you would know for certain is if you test it yourself first.
 
 
 Please see folder attached with all Runbook Scripts used - [Runbook Scripts](https://github.com/HarveyAland/auzre-monitoring-remediation/tree/main/Runbook%20Scripts)
@@ -192,7 +192,7 @@ The Logic App can easily integrate with ServiceNow, Microsoft Teams, or other sy
 
 ### My Use Case 
 - Filtering alert rules to fire specific run books that match the parse criteria 
-- Decoupled from remediation (runbooks).  
+- Decoupled from remediation (Runbooks).  
 - Can extend to email, Teams, ServiceNow, etc.  
 
 ### How it works for me 
@@ -208,7 +208,7 @@ Below is a visualization of the Logic App workflow during a successful run.
 ---
 
 ## 📊 Visualization with Grafana
-Grafana was a no brainer when choosing what tool I would be using for the visualization section on this project. Creating dashboard was very straightforward and was the part I had the most fun with, I feel like with a bigger deployment in a real production environment you could to really utilize the power of Grafana!
+Grafana was a no-brainer when choosing what tool I would be using for the visualization section on this project. Creating the dashboard was very straightforward and was the part I had the most fun with, I feel like with a bigger deployment in a real production environment you could really utilize the power of Grafana!
 
 The dashboard is organized into four key rows, each focusing on a specific monitoring dimension. You can find the associated KQL queries attached - [Grafana Dashboard Queries](https://github.com/HarveyAland/auzre-monitoring-remediation/tree/main/Log%20KQL%20Querys/Visulization%20Querys) 
 
@@ -219,7 +219,7 @@ Following this structure really ties the system together: SMEs and NOC engineers
 
 **CPU** - CPU — Monitoring the CPU usage of each VM in individual panels, with threshold markers at 40%, 70%, and 85% to improve visualization. No KQL query was required, as data was sourced directly from Azure Monitor Metrics for Virtual Machines. Please see screenshot for [configuration.](screenshots/cpu-panel-config.png)
 
-**VM Health** - Using a heartbeat based query to monitor and output the health status of the VMs and pulling two important metrics (Minuets Since & Last Seen) which tell you when the last HB was and how long its been since its last been online.
+**VM Health** - Using a heartbeat based query to monitor and output the health status of the VMs and pulling two important metrics (Minutes Since & Last Seen) which tell you when the last HB was and how long it's been since it's last been online.
 
 **Service Health** - Pulling the Service data from a custom log I had set up, the Service Health follows a similar style to the VM Health table above again incorporating the Last Seen tab. 
 
@@ -228,12 +228,12 @@ Following this structure really ties the system together: SMEs and NOC engineers
 ---
 
 ## 🧪 Testing & Verification
-This section documents how alerts and runbooks were validated. I wanted this document not to be just a bunch of screenshots back to back, but instead dedicate one section to a full workflow test and proof of concept — showcasing not only the process, but also the time in which the remediation takes place. Albeit all configured remediation scenarios were tested, I chose the IIS service down scenario to showcase for this project, as naturally in an enterprise environment, out of the services I have running, IIS would be the most important from a high availability standpoint.  
+This section documents how alerts and runbooks were validated. I wanted this document not to be just a bunch of screenshots back to back, but instead dedicate one section to a full workflow test and proof of concept — showcasing not only the process, but also the time in which the remediation takes place. Although all configured remediation scenarios were tested, I chose the IIS service down scenario to showcase for this project, as naturally in an enterprise environment, out of the services I have running, IIS would be the most important from a high availability standpoint.  
 
 **Format:**  
 1. **Step taken** (e.g., stopped IIS service).  
 2. **Expected outcome** (alert triggers, runbook runs).  
-3. **Evidence screenshot** (LAW query / Azure Job output / Grafana update).  
+3. **Checks & Validation** (LAW query / Azure Job output / Grafana update).  
 4. **Result summary** (alert + remediation worked).  
 
 <br>
@@ -317,7 +317,7 @@ Email sent to admin containing alert data passed from parameters ✅
 
 <br>
 
-## 4. Final Dashboard View After Remediation 
+## 4. Result summary
 
 As you can see, the full workflow has been successful — the event was monitored, alerted, admin notified, visualized, and fully remediated.  
 
@@ -331,6 +331,15 @@ As you can see, the full workflow has been successful — the event was monitore
 This test validates that the automated remediation workflow functions as intended across detection, routing, execution, and visualization layers — fully closing the loop from alert to resolution.  
 
 
+## 🏁 Conclusion
+
+This project demonstrates a complete **Azure monitoring and auto-remediation pipeline**, integrating **infrastructure as code (Bicep)**, **alert-driven automation**, and **real-time visualization** with Grafana.  
+
+By combining multiple Azure services — Monitor, Logic Apps, Automation, and Log Analytics — the solution delivers **proactive detection, self-healing, and observability** across hybrid workloads.  
+
+It not only highlights my ability to design and build scalable monitoring systems, but also reflects real-world operations principles such as **MTTD/MTTR reduction**, **alert correlation**, and **cross-platform automation**.  
+
+In short, this lab bridges the gap between theory and production — a self-healing, insight-driven Azure environment built entirely from scratch.
 
 
 
