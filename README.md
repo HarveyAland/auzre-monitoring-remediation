@@ -10,6 +10,8 @@ The design choices (Bicep for infrastructure, console for identity/monitoring co
 
 Through testing, I validated that failures in services like IIS, Nginx, and the Windows Print Spooler were detected and remediated within minutes, reducing downtime and meeting real-world recovery objectives.  
 
+**Tech Stack:** Azure Monitor • Log Analytics Workspace (LAW) • Data Collection Rules (DCR) • Automation Runbooks • Logic App • Bicep • PowerShell • Grafana
+
 ### SET UP 
 This Project was designed and configured in 6 main parts and will follow the same structure in this .README file: 
 
@@ -42,15 +44,17 @@ The reason for the split in infrastructure deployment was mainly down to the fac
 - **Logic App** for alert-driven notifications/workflows  
 - **IAM** all identity access management was configured via the console, for this deployment there was minimal IAM setup needed.
 
+All resources were deployed into a single environment with clear dependencies — every VM was linked to the same Log Analytics Workspace and Data Collection Rule to ensure consistent data ingestion and centralized alerting across the stack.
+
 Please see folder attached with all Bicep files - [Bicep Files](https://github.com/HarveyAland/auzre-monitoring-remediation/tree/main/bicep%20files):
 
 ---
 ## Automation 
 The Automation side of this project was done inside the configured aim-auto automation account. 
 
-After the main VMs were created i went on the build and test the automation scripts the VMs would be configured to run when they need to be remediated. 
+After the main VMs were created, I began building and testing the automation scripts that each VM would use for self-remediation when a fault occurred.  
 
-This is a section i could have happily spent much more time on and really dived into the remediation side but as per the project scope this is as much as a monitoring project as it is about infra remediation. 
+This was one of the most enjoyable parts of the project — and one I could have easily expanded further. While the main focus was monitoring and alerting, automation played an equally important role by turning insights into real, measurable recovery actions. 
 
 The RunBooks were created in mind of production level issues within VMs and servers that most reading will have been at the mercy of at least once in our professional careers, the waiting time can be agonizing especially in my case when i have an end user waiting on me to provide access to a system that is currently down. 
 
@@ -84,35 +88,26 @@ Monitoring was at the core of this project — it tied together metrics, logs, a
 
 ### 🔍 How It Works
 
-1.  **Metrics Collection**
-    
-    -   Metrics such as CPU, disk, memory, and heartbeat were collected directly from each VM.
-        
-    -   This was enabled through the **Azure Monitoring VM extensions**, which continuously gather performance data and forward it to **Log Analytics Workspace (LAW)**.
-        
-2.  **Log Collection**
-    
-    -   Logs included **Heartbeat, Windows Event Logs, and Linux Syslog**.
-        
-    -   A **Data Collection Rule (DCR)** was configured to ensure that both Windows and Linux VMs were sending the correct events into LAW.
-        
-3.  **Alert Rules**
-    
-    -   Alert rules were defined to evaluate **metrics thresholds** or **KQL query results**.
-        
-    -   When conditions were met, the alert entered a **fired** state.
-        
-4.  **Action Group → Logic App**
-    
-    -   Instead of linking each alert directly to a Runbook (which doesn’t scale well), all alerts were funneled into a **single Action Group**.
-        
-    -   This Action Group triggered a **Logic App**, which parsed the incoming alert data and matched it to the correct remediation workflow.
-        
-5.  **Automation & Notification**
-    
-    -   The Logic App invoked the matching **Automation Runbook**, which executed remediation on the affected VM.
-        
-    -   Once complete, the Logic App also sent a **notification via email** (and could be easily extended to Teams, ServiceNow, or webhooks).
+1. **Metrics Collection**  
+   - Metrics such as CPU, disk, memory, and heartbeat were collected directly from each VM using **Azure Monitor VM Insights**.  
+   - These metrics were streamed continuously into the **Log Analytics Workspace (LAW)** for visualization and alert evaluation.
+
+2. **Log Collection**  
+   - Logs included **Heartbeat**, **Windows Event Logs**, and **Linux Syslog** entries.  
+   - A unified **Data Collection Rule (DCR)** ensured both Windows and Linux VMs forwarded their respective service and performance logs to LAW.
+
+3. **Alert Rules**  
+   - Alerts were defined using either **metric thresholds** (e.g., CPU > 85%) or **KQL-based log queries** (e.g., service down).  
+   - When a condition was met, the alert transitioned into a **Fired** state and triggered downstream automation.
+
+4. **Action Group → Logic App**  
+   - Rather than linking alerts directly to Runbooks (which doesn’t scale), all alerts were tied to a **single Action Group**.  
+   - This Action Group invoked a **Logic App** that analyzed the alert payload and determined which Runbook to trigger based on alert name or tags.
+
+5. **Automation & Notification**  
+   - The Logic App authenticated via Managed Identity and called the corresponding **Automation Runbook** to perform remediation.  
+   - Upon completion, it also sent **email notifications** — a process that could easily be extended to Teams, ServiceNow, or webhook integrations.
+
         
 
 ----------
@@ -140,16 +135,16 @@ The following key alerts were implemented as part of the monitoring design:
 
 One of the first challenges I encountered was that log-based monitoring is **event-driven**. It only reports when a service changes state. That meant dashboards could misleadingly show a service as healthy, simply because the last event was from hours ago - even if the service had since gone offline.
 
-To address this, I combined **event-driven alerts** for alerts with a **scheduled heartbeat stream** for dashboards across a mixed environment of two Windows VMs and one Linux VM. This provided a consistent **2-minute detection window** for failures, bridging the gap between event-based alerts and real-time monitoring.
+To address this issue while visualizing the project infrastructure in Grafana, I combined event-driven alerts with a scheduled service status stream across a mixed environment of two Windows VMs and one Linux VM. This setup provided a consistent 2-minute detection window for service failures, effectively bridging the gap between event-based alerting and real-time monitoring.
 
 -   On **Windows**, the job ran as a Task Scheduler task at startup and every 2 minutes thereafter.
     
 -   On **Linux**, the job was implemented with a cron job (or systemd timer) at the same interval.
 
--   All jobs were configured to run thier own scripts 
+-   All jobs were configured to run their own scripts 
     
 
-The script ran by the task did the following:
+**Each scheduled script performed the following steps:**
 
 -   Checked the status of critical services (IIS, Print Spooler, and Nginx).
     
@@ -165,47 +160,49 @@ The trade-off is that scheduled jobs require local configuration on each VM, and
 ---
 ## KQL Query Validation
 
-Arguably the longest part of this project was the querying and testing of events though LAW. It was an never-ending battle of stress testing queries to make sure they worked in all circumstances. 
+Arguably the most time-consuming part of this project was querying and testing events through Log Analytics Workspace (LAW). It was a never-ending process of stress-testing queries to ensure they worked under all conditions. 
 
 Many times, a query that appeared correct in one test would fail in another because I hadn’t accounted for a specific condition. This constant cycle forced me to refine queries repeatedly until they were reliable.
 
 
-A good example was the **service down alert**. When a VM crashed, the service running on it would obviously be down as well — meaning both the VM failure alert and the service down alert could fire simultaneously, creating duplicate alerts. To resolve this, I added a **Heartbeat check** so the service alert would only trigger if the VM itself was still healthy.
+A good example was the **service down alert**. When a VM crashed, the dependent service would naturally stop too — causing both the VM failure alert and the service-down alert to trigger at once, resulting in duplicate notifications. To resolve this, I added a **Heartbeat check** so the service alert would only trigger if the VM itself was still healthy.
 
-I also:
+I also introduced:
 
 -   Added a **`Computer` field filter** so queries were tied to the correct VM, preventing cross-VM false positives.
     
 -   Introduced a **5-minute suppression period** to prevent a single VM’s alert from repeatedly firing on the same event.
 
--   Set **Alert Rule** Evaluation time to every 5 minutes.  
+-   Set **Alert Rule** evaluation interval to 5 minutes.  
     
 
-These changes eliminated redundant alerts and made the monitoring rules much more reliable.
+These refinements eliminated redundant alerts and made the monitoring layer far more reliable and scalable.
 
 👉 Please see all queries for the alert rules in the queries folder [Alert Rule Queries](https://github.com/HarveyAland/auzre-monitoring-remediation/tree/main/Log%20KQL%20Querys/Alert%20Rule%20Querys)
 
 ---
 ## 🔔 Logic App Integration
-The theory behind the implementation of the logic app is simple, if this were a full sized enterprise level deployment there might be 150+ alert rules monitoring different metrics which would you would need equal part action groups to fire just the one rule that has been triggered. 
+The idea behind using a Logic App is simple: in a large-scale enterprise deployment with potentially 150+ alert rules, it’s impractical to maintain a separate Action Group for each alert. Instead, the Logic App acts as a centralized routing system that handles all alerts efficiently.
 
-The Logic App acts as a filter, taking in the fired alert rule data, phasing it through the filter and firing the correct run book that has to equal the name of recently fired alert rule. 
+The Logic App serves as a filter: it receives alert data, parses it, and triggers the corresponding Runbook whose name matches the fired alert rule. 
 
-All of the configuration for this was done through the portal logic app editor which was very interactive, seems like the avenues you can go down with this resource is endless. 
+All configuration was done through the Azure portal’s Logic App designer, which I found highly interactive. The number of automation paths and integrations you can build with it is practically endless. 
 
-With options to build out the automation with links to create Servicenow Tickets from events, webhooks for messages into teams groups ect, i only used this logic app for my current work need but the reality is the possibility to build out and expand with this automation work frame tool is pretty impressive.   
+The Logic App can easily integrate with ServiceNow, Microsoft Teams, or other systems through webhooks and connectors. In this project, I used it purely for alert routing, but its potential for enterprise-scale automation is impressive.  
 
 ### My Use Case 
-- Filtering alert rules to fire specific run books that match the phase criteria 
+- Filtering alert rules to fire specific run books that match the parse criteria 
 - Decoupled from remediation (runbooks).  
 - Can extend to email, Teams, ServiceNow, etc.  
 
 ### How it works for me 
-This Logic App is triggered when an HTTP request (Azure Monitor alert) is received. The payload is parsed, and the workflow checks if the alert’s **monitorCondition** is set to _Fired_. If not, it ends. If it has fired, the alert details (name, severity, time, and target resource) are logged to Log Analytics. The app then uses a **Switch** action on the alert rule name to decide which Automation Runbook to start. Each case corresponds to a specific alert (e.g., IIS restart, VM restart, print service restart, Nginx restart/cleanup). If no case matches, it simply records the normalized alert rule name without running a job. Authentication to Automation uses the Logic App’s Managed Identity.
+This Logic App is triggered when an HTTP request from an Azure Monitor alert is received. The payload is parsed, and the workflow checks whether the alert’s monitorCondition is set to Fired. If not, the process ends. When it is fired, the alert details — including name, severity, timestamp, and target resource — are logged to Log Analytics.
+
+The app then uses a Switch action on the alert rule name to determine which Automation Runbook to execute. Each case corresponds to a specific alert type (e.g., IIS restart, VM restart, Print Spooler restart, Nginx cleanup). If no case matches, it records the normalized alert rule name without initiating a job. Authentication to Azure Automation is handled through the Logic App’s Managed Identity.
 
 ### Logic App Diagram
 
-Here we have a clear depiction of the logic app workflow during a succesful run. 
+Below is a visualization of the Logic App workflow during a successful run.
 
 ![test-la-route-firing](screenshots/test-la-route-firing.png)
 ---
@@ -213,25 +210,25 @@ Here we have a clear depiction of the logic app workflow during a succesful run.
 ## 📊 Visualization with Grafana
 Grafana was a no brainer when choosing what tool I would be using for the visualization section on this project. Creating dashboard was very straightforward and was the part I had the most fun with, I feel like with a bigger deployment in a real production environment you could to really utilize the power of Grafana!
 
-The Dashboard is split into 4 rows and you can find the LAW queries for them in the folder attached - [Grafana Dashboard Queries](https://github.com/HarveyAland/auzre-monitoring-remediation/tree/main/Log%20KQL%20Querys/Visulization%20Querys) 
+The dashboard is organized into four key rows, each focusing on a specific monitoring dimension. You can find the associated KQL queries attached - [Grafana Dashboard Queries](https://github.com/HarveyAland/auzre-monitoring-remediation/tree/main/Log%20KQL%20Querys/Visulization%20Querys) 
 
 Following this structure really ties the system together: SMEs and NOC engineers can **see system state, recent failures, and whether automation handled them**.
 
 ![Grafana Visulisation NOC inspired view](screenshots/grafana-dash-complete.png)
 
 
-**CPU** - Monitoring the CPU of each VM in their own individual panel with threshold markers added at 40%, 70% and 85% to help aid in the visualization. No kql query was needed for this table as I used Azure Monitor Metrics for Virtual Machines to provide the cpu data. Please see screenshot for [configuration](screenshots/cpu-panel-config.png)
+**CPU** - CPU — Monitoring the CPU usage of each VM in individual panels, with threshold markers at 40%, 70%, and 85% to improve visualization. No KQL query was required, as data was sourced directly from Azure Monitor Metrics for Virtual Machines. Please see screenshot for [configuration.](screenshots/cpu-panel-config.png)
 
 **VM Health** - Using a heartbeat based query to monitor and output the health status of the VMs and pulling two important metrics (Minuets Since & Last Seen) which tell you when the last HB was and how long its been since its last been online.
 
-**Service Health** - Pulling the Service data from a custom log i had set up, the Service Health follows a similar style to the VM Health table above again incorporating the Last Seen tab. 
+**Service Health** - Pulling the Service data from a custom log I had set up, the Service Health follows a similar style to the VM Health table above again incorporating the Last Seen tab. 
 
 **Most Recent Fired Alert** - Using the fired alert data that's fed into LAW from the logic app, this query table is a nice addition for this dashboard. 
 
 ---
 
 ## 🧪 Testing & Verification
-This section documents how alerts and runbooks were validated. I wanted this document not to be just a bunch of screenshots back to back and instead save one dedicated section to a full workflow test and proof of concept showcasing not only the process but the time in which the remediation takes place. Allbeit all configured remediation scenarios were tested I chose the IIS service down to showcase for this project as naturally in an enterprise enviroment out of the services i have running iis would be the most important from a high availablity stabdpoint.  
+This section documents how alerts and runbooks were validated. I wanted this document not to be just a bunch of screenshots back to back, but instead dedicate one section to a full workflow test and proof of concept — showcasing not only the process, but also the time in which the remediation takes place. Albeit all configured remediation scenarios were tested, I chose the IIS service down scenario to showcase for this project, as naturally in an enterprise environment, out of the services I have running, IIS would be the most important from a high availability standpoint.  
 
 **Format:**  
 1. **Step taken** (e.g., stopped IIS service).  
@@ -239,64 +236,104 @@ This section documents how alerts and runbooks were validated. I wanted this doc
 3. **Evidence screenshot** (LAW query / Azure Job output / Grafana update).  
 4. **Result summary** (alert + remediation worked).  
 
+<br>
 
-## Grafana Dashboard Before Test
+**Grafana Dashboard Before Test**
 
 ![Before Test](screenshots/beforetest.png)
 
+<br>
+
 ## 1. Step taken 
 
-Forced iis to stop using the following command which i ran from the console: 
+Forced IIS to stop using the following command, which I ran from the console:  
 
+**Stop-Service -Name 'W3SVC' -Force**  
 
-**Stop-Service -Name 'W3SVC' -Force** 
-
+<br>
 
 ![Stopping IIS Service](screenshots/test-stop-cmd.png)
 
+<br>
 
 ## 2. Expected outcome
 
-LAW is sent recent service status logs that have been collected from the DCR that the custom job and script checked and pushed.
+LAW receives recent service status logs that have been collected from the DCR, which the custom job and script checked and pushed.
 
+<br>
+
+**Logs collecting the event**  
 ![Logs collecting event after test](screenshots/test-custom-task-catching-error-sending-to-law-results.png)
 
-Grafana Dashboad will vizulise the event from the data the event query returns - [IIS Service Grafana Query](https://github.com/HarveyAland/auzre-monitoring-remediation/blob/main/Log%20KQL%20Querys/Visulization%20Querys/IIS%20Service%20Health%20Query)
+<br>
 
+Grafana Dashboard will visualize the event from the data returned by the event query — [IIS Service Grafana Query](https://github.com/HarveyAland/auzre-monitoring-remediation/blob/main/Log%20KQL%20Querys/Visulization%20Querys/IIS%20Service%20Health%20Query)
+
+<br>
+
+**Grafana Dashboard During Test**  
 ![During Test](screenshots/test-grafana-dash-after.png)
 
-Alert Rule that is set up to monitor IIS service events will be triggered - [IIS Service Alert Rule Query](https://github.com/HarveyAland/auzre-monitoring-remediation/blob/main/Log%20KQL%20Querys/Alert%20Rule%20Querys/iis-service-restart-rule)
+<br>
+
+**Alert Rule that is set up to monitor IIS service events will be triggered** — [IIS Service Alert Rule Query](https://github.com/HarveyAland/auzre-monitoring-remediation/blob/main/Log%20KQL%20Querys/Alert%20Rule%20Querys/iis-service-restart-rule)
+
+<br>
+
 ![IIS Alert Rule Fired](screenshots/test-alert-rule-fired.png)
 
-Once Alert rule is fired the Alert group linked send the alert data straight to the **Logic App** as configred and the automation workflow of routing/notifying begins.
+<br>
 
+Once the Alert Rule is fired, the linked Action Group sends the alert data straight to the **Logic App**, as configured, and the automation workflow of routing and notification begins.
+
+<br>
+
+**Logic App Showing a Successful Run**  
 ![LA Running](screenshots/test-la-route-firing.png)
+
+<br>
 
 ## 3. Checks & Validation
 
-With the **Logic App** begin invoked and running sucsessfully we can start to verify its automation workflow has ran as expected. 
+With the **Logic App** being invoked and running successfully, we can start to verify its automation workflow has executed as expected.  
 
-Alert Rule information passed into the custom log we created to gather and show case recent fired alerts on the dashboard (will be verified in final Grafana dash screenshot)✅
+Alert Rule information was passed into the custom log we created to gather and showcase recently fired alerts on the dashboard (verified in the final Grafana dashboard screenshot) ✅  
 
-Correct Rule fired and RunBook Linked to Rule was invoked ✅
+Correct rule fired and Runbook linked to the rule was invoked ✅  
 
+<br>
+
+**Runbook Invoked**  
 ![Runbook spun-up](screenshots/test-runbook-ran-from-la-automation.png)  
 
-Email sent to admin containing alert data passed from Parameters ✅
+<br>
 
+Email sent to admin containing alert data passed from parameters ✅  
+
+<br>
+
+**Email Sent To Admin**  
 ![Email to admin](screenshots/test-email-alert-fired-notification.png)
 
+<br>
 
-## 4. Final Dashboard view after remediation 
+## 4. Final Dashboard View After Remediation 
 
-As you can the full workflow has been succsesful with the event being monitroed, alerted, admin notified, event visualized and fully remediated 
+As you can see, the full workflow has been successful — the event was monitored, alerted, admin notified, visualized, and fully remediated.  
 
+<br>
+
+**Grafana Dashboard After Test**  
 ![Grafana After](screenshots/test-grafana-dash-after.png)
 
+<br>
 
-This now completes the test portion of the project, showcasing a full remediation. On this check we had a full service recovery of under 4 minuets. 
+This test validates that the automated remediation workflow functions as intended across detection, routing, execution, and visualization layers — fully closing the loop from alert to resolution.  
 
-### Project Summery 
+
+
+
+
 
 
 
