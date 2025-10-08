@@ -46,7 +46,7 @@ The reason for the split in infrastructure deployment was mainly down to the fac
 
 All resources were deployed into a single environment with clear dependencies — every VM was linked to the same Log Analytics Workspace and Data Collection Rule to ensure consistent data ingestion and centralized alerting across the stack.
 
-Please see folder attached with all Bicep files - [Bicep Files](https://github.com/HarveyAland/auzre-monitoring-remediation/tree/main/bicep%20files):
+Please see folder attached with all Bicep files - [Bicep Files](https://github.com/HarveyAland/azure-monitoring-remediation/tree/main/bicep%20files):
 
 ---
 ## Automation 
@@ -75,7 +75,7 @@ This model solves a lot of that with the monitoring and automatic remediation of
 - As you will find in the table above there are more Runbooks here than are set up to rules, not all run books would realistically be automatically spun, some needing reviewed and some troubleshooting steps taken beforehand. This would be the case with the IIS app hanging for example, only way you would know for certain is if you test it yourself first.
 
 
-Please see folder attached with all Runbook Scripts used - [Runbook Scripts](https://github.com/HarveyAland/auzre-monitoring-remediation/tree/main/Runbook%20Scripts)
+Please see folder attached with all Runbook Scripts used - [Runbook Scripts](https://github.com/HarveyAland/azure-monitoring-remediation/tree/main/Runbook%20Scripts)
 
 ---
 
@@ -178,7 +178,7 @@ I also introduced:
 
 These refinements eliminated redundant alerts and made the monitoring layer far more reliable and scalable.
 
-👉 Please see all queries for the alert rules in the queries folder [Alert Rule Queries](https://github.com/HarveyAland/auzre-monitoring-remediation/tree/main/Log%20KQL%20Querys/Alert%20Rule%20Querys)
+👉 Please see all queries for the alert rules in the queries folder [Alert Rule Queries](https://github.com/HarveyAland/azure-monitoring-remediation/tree/main/Log%20KQL%20Queries/Alert%20Rule%20Queries)
 
 ---
 ## 🔔 Logic App Integration
@@ -210,7 +210,7 @@ Below is a visualization of the Logic App workflow during a successful run.
 ## 📊 Visualization with Grafana
 Grafana was a no-brainer when choosing what tool I would be using for the visualization section on this project. Creating the dashboard was very straightforward and was the part I had the most fun with, I feel like with a bigger deployment in a real production environment you could really utilize the power of Grafana!
 
-The dashboard is organized into four key rows, each focusing on a specific monitoring dimension. You can find the associated KQL queries attached - [Grafana Dashboard Queries](https://github.com/HarveyAland/auzre-monitoring-remediation/tree/main/Log%20KQL%20Querys/Visulization%20Querys) 
+The dashboard is organized into four key rows, each focusing on a specific monitoring dimension. You can find the associated KQL queries attached - [Grafana Dashboard Queries](https://github.com/HarveyAland/azure-monitoring-remediation/tree/main/Log%20KQL%20Queries/Visulisation%20Queries) 
 
 Following this structure really ties the system together: SMEs and NOC engineers can **see system state, recent failures, and whether automation handled them**.
 
@@ -267,7 +267,7 @@ LAW receives recent service status logs that have been collected from the DCR, w
 
 <br>
 
-Grafana Dashboard will visualize the event from the data returned by the event query — [IIS Service Grafana Query](https://github.com/HarveyAland/auzre-monitoring-remediation/blob/main/Log%20KQL%20Querys/Visulization%20Querys/IIS%20Service%20Health%20Query)
+Grafana Dashboard will visualize the event from the data returned by the event query — [IIS Service Grafana Query](https://github.com/HarveyAland/azure-monitoring-remediation/blob/main/Log%20KQL%20Queries/Visulisation%20Queries/IIS%20Service%20Health%20Query)
 
 <br>
 
@@ -276,7 +276,7 @@ Grafana Dashboard will visualize the event from the data returned by the event q
 
 <br>
 
-**Alert Rule that is set up to monitor IIS service events will be triggered** — [IIS Service Alert Rule Query](https://github.com/HarveyAland/auzre-monitoring-remediation/blob/main/Log%20KQL%20Querys/Alert%20Rule%20Querys/iis-service-restart-rule)
+**Alert Rule that is set up to monitor IIS service events will be triggered** — [IIS Service Alert Rule Query](https://github.com/HarveyAland/azure-monitoring-remediation/blob/main/Log%20KQL%20Queries/Alert%20Rule%20Queries/iis-service-restart-rule)
 
 <br>
 
